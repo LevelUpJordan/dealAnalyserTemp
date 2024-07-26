@@ -1,0 +1,147 @@
+<head>
+    <script src="jQuery.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="scripts.js"></script>
+    <style>
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .filter {
+            padding-bottom:5px;
+        }
+
+        .bordered {
+            border-bottom: #eb008c;
+            border-width: medium;
+            border-style: dotted;
+            border-right: none;
+            border-left: none;
+            border-top: none;
+            padding-bottom:10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        table {
+            font-size: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="kb3_page" id="test" style="font-family: Helvetica, Arial, sans-serif;">
+
+    <div class="wowcher-header" style="width: 100%;background: #ffebf7;margin-bottom: 10px;border-bottom: #eb008c;border-width: thick;border-style: solid;border-right: none;border-left: none;border-top: none;">
+       <img alt="Logo" src="https://resources.wowcher.co.uk/images/wowcher-logo.svg" width="100" class="jsx-573716459 logo" style="padding: 10px;">
+    </div>
+
+    
+    <div class="loc_filter filter">
+        <label for="location">Location</label>
+        <select id="location" name="Location" class="custom-select" style="width: 119px;height: 24px;">
+            <option value="Belfast|Ireland">Belfast</option>
+            <option value="Birmingham|Midlands">Birmingham</option>
+            <option value="Bournemouth|London">Bournemouth</option>
+            <option value="Brighton|London">Brighton</option>
+            <option value="Bristol|South West">Bristol</option>
+            <option value="Cardiff|South West">Cardiff</option>
+            <option value="Derby|Midlands">Derby</option>
+            <option value="Edinburgh|Scotland">Edinburgh</option>
+            <option value="Essex|London">Essex</option>
+            <option value="Glasgow|Scotland">Glasgow</option>
+            <option value="Kent|London">Kent</option>
+            <option value="Leeds|North">Leeds</option>
+            <option value="Leicester|Midlands">Leicester</option>
+            <option value="Liverpool|North">Liverpool</option>
+            <option value="London|London">London</option>
+            <option value="Manchester|North">Manchester</option>
+            <option value="Newcastle|Scotland">Newcastle</option>
+            <option value="Nottingham|Midlands">Nottingham</option>
+            <option value="Portsmouth|London">Portsmouth</option>
+            <option value="Reading|London">Reading</option>
+            <option value="Sheffield|North">Sheffield</option>
+            <option value="Southampton|London">Southampton</option>
+            <option value="Stoke-on-Trent|Midlands">Stoke-on-Trent</option>
+            <option value="Surrey|London">Surrey</option>
+            <option value="Wolverhampton|Midlands">Wolverhampton</option>
+        </select>
+    </div>
+
+    <div class="cat_filter filter">
+        <label for="category">Category:</label>
+        <select id="category" onchange="updateSubcategories()">
+            <option value="">Select a category</option>
+            <option value="Beauty">Beauty</option>
+            <option value="Restaurants & Bars">Restaurants & Bars</option>
+            <option value="Activities">Activities</option>
+            <option value="Spas & Country House">Spas & Country House</option>
+            <option value="UK City Breaks">UK City Breaks</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Food and Drink">Food and Drink</option>
+            <option value="Learning">Learning</option>
+            <option value="Tradesmen">Tradesmen</option>
+            <option value="UK Seaside">UK Seaside</option>
+            <option value="Ireland">Ireland</option>
+            <option value="Legal Services">Legal Services</option>
+            <option value="Fitness">Fitness</option>
+            <option value="Wedding">Wedding</option>
+            <option value="Home">Home</option>
+            <option value="Other">Other</option>
+        </select>
+    </div>
+
+    <div class="subcat_filter filter">
+    <label for="subcategory">Subcategory:</label>
+        <select id="subcategory">
+            <option value="">Select a subcategory</option>
+        </select>
+    </div>
+
+    <div class="input price_input">
+        <label for="price">Price:</label>
+        <input type="number" id="price" name="price" min="1" max="1000" step="1" value="1">
+    </div>
+
+    <div class="input discount_pc_input">
+        <label for="discount_pc">Discount Percent:</label>
+        <input type="number" id="discount_pc" name="discount_pc" min="1" max="100" step="1" value="1">
+    </div>
+
+    <div class="input wowcher_fee_input">
+        <label for="wowcher_fee">Wowcher Fee:</label>
+        <input type="number" id="wowcher_fee" name="wowcher_fee" min="1" max="100" step="1" value="1">
+    </div>
+
+    <div class="input total_locs_input">
+        <label for="total_locs">Total Locations:</label>
+        <input type="number" id="total_locs" name="total_locs" min="1" max="100" step="1" value="1">
+    </div>
+
+    <div class="input centre_distance_input">
+        <label for="centre_distance">Distance To City Centre:</label>
+        <input type="number" id="centre_distance" name="centre_distance" min="1" max="100" step="1" value="1">
+    </div>
+
+    <div class="input unique_cities_input">
+        <label for="unique_cities">Unique Cities:</label>
+        <input type="number" id="unique_cities" name="unique_cities" min="1" max="100" step="1" value="1">
+    </div>
+
+    <button onclick="onInitialSubmit()">Submit</button>
+
+    <div id="resultsArea">
+        <div id="messaging">
+        </div>
+        <div id="finalScore">
+        </div>
+    </div>
+
+</body>
