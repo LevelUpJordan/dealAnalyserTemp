@@ -1,10 +1,10 @@
-console.log("0.05");
+console.log("0.34");
 
-function buildMongoQuery(type, location, region, category, subcategory) {
+function buildMongoQuery(type, location, region, category, subcategory, concept) {
 
     var request = [];
 
-    if ( type == "Location") {
+    if ( type.indexOf("Location") > -1 ) {
         request.push({
             "$match": {
                 "location":location
@@ -12,7 +12,7 @@ function buildMongoQuery(type, location, region, category, subcategory) {
         });
     }
 
-    if ( type == "Region") {
+    if ( type.indexOf("Region") > -1 ) {
         request.push({
             "$match": {
                 "region":region
@@ -20,7 +20,7 @@ function buildMongoQuery(type, location, region, category, subcategory) {
         });
     }
 
-    if ( type != "Category") {
+    if ( type.indexOf("Category") == -1 && type.indexOf("Concept") == -1 ) {
         request.push({
             "$match": {
                 "subcategory":subcategory
@@ -28,16 +28,26 @@ function buildMongoQuery(type, location, region, category, subcategory) {
         });
     }
 
-    request.push({
-        "$match": {
-            "category":category
-        }
-    });
+    if ( type.indexOf("Concept") == -1 ) {
+      request.push({
+          "$match": {
+              "category":category
+          }
+      });
+    }
+
+    if ( type.indexOf("Concept") > -1 ) {
+      request.push({
+          "$match": {
+              "concept":concept
+          }
+      });
+    }
 
     return request
 }
 
-function buildMongoSettings(type, location, region, subcategory, category) {
+function buildMongoSettings(type, location, region, subcategory, category, concept) {
 
     var settings = {
         "url": "https://eu-west-2.aws.data.mongodb-api.com/app/data-bdwyp/endpoint/data/v1/action/aggregate",
@@ -53,7 +63,7 @@ function buildMongoSettings(type, location, region, subcategory, category) {
             "database": "DealAnalyser",
             "dataSource": "KnowledgeBase",
             "pipeline": 
-                buildMongoQuery(type, location, region, subcategory, category)
+                buildMongoQuery(type, location, region, subcategory, category, concept)
             
             }),
     };
@@ -64,6 +74,12 @@ function buildMongoSettings(type, location, region, subcategory, category) {
 function onInitialSubmit(){
 
     if ( !window.processing ) {
+    
+       jQuery("#technicalMessaging").empty();
+       jQuery("#messaging").empty();
+       jQuery("#finalScore").empty();
+       jQuery("#predictedRev").empty();
+       jQuery("#exampleDeals").empty();
 
         window.processing = true;
 
@@ -87,7 +103,7 @@ function onInitialSubmit(){
     }
 }
 
-function getData(type, location, region, category, subcategory) {
+function getData(type, location, region, category, subcategory, concept) {
 
     var nextType = "";
 
@@ -101,13 +117,29 @@ function getData(type, location, region, category, subcategory) {
         nextType = "Subcategory";
 
     }
-    else {
+    else if ( type == "Subcategory") {
 
         nextType = "Category";
 
     }
+    else if ( type == "ConceptLocation") {
 
-    jQuery.ajax(buildMongoSettings(type,location,region,category,subcategory)).done(function (response) {
+        nextType = "ConceptRegion";
+
+    }
+    else if ( type == "ConceptRegion") {
+
+        nextType = "Concept";
+
+    }
+    else {
+
+      nextType = "None";
+
+    }
+
+
+    jQuery.ajax(buildMongoSettings(type,location,region,category,subcategory,concept)).done(function (response) {
 
         var responseData = response["documents"];
 
@@ -115,25 +147,48 @@ function getData(type, location, region, category, subcategory) {
 
         if ( responseData.length == 0 ) {
 
-            console.log("No results at "+type+" level, trying "+nextType);
+            if ( nextType != "None" ) {
 
-            window.processing = true;
+                jQuery("#technicalMessaging").append("<div>No results at "+type+" level, trying "+nextType+"</div>");
 
-            getData(nextType, location, region, category, subcategory);
+                window.processing = true;
 
-            return
+                getData(nextType, location, region, category, subcategory, concept);
+
+                return
+            }
+
+            else {
+
+                jQuery("#technicalMessaging").append("<div>No Results</div>");
+
+                return
+
+            }
 
         }
 
         var result = responseData[0];
 
-        if ( result["trainingDeals"] < 10 ) {
+        if ( result["totalDeals"] < 10  ) {
 
-            console.log("Not enough data at "+type+" level, trying "+nextType);
+            if ( nextType != "None" ) {
 
-            getData(nextType, location, region, category, subcategory);
+                jQuery("#technicalMessaging").append("<div>Not enough data at "+type+" level, trying "+nextType+"</div>");
 
-            return
+                getData(nextType, location, region, category, subcategory, concept);
+
+                return
+
+            }
+
+            else {
+
+                jQuery("#technicalMessaging").append("<div>No Results</div>");
+
+                return
+
+            }
 
         }
 
@@ -144,14 +199,23 @@ function getData(type, location, region, category, subcategory) {
 
 function sendInitialRequest() {
 
-    var type = "Location";
+    var matchType = document.getElementById("match_type").value;
+    var concept = document.getElementById("concept").value;
+    if ( matchType == "Concept") {
+      var type = "ConceptLocation";
+    }
+    else {
+      var type = "Location";
+    }
+    
     var cat = document.getElementById("category").value;
     var subcat = document.getElementById("subcategory").value;
     var locArray = document.getElementById("location").value.split("|");
     var loc = locArray[0];
     var region = locArray[1];
 
-    getData(type,loc,region,cat,subcat);
+
+    getData(type,loc,region,cat,subcat,concept,matchType);
 }
 
 function updateSubcategories() {
@@ -176,8 +240,174 @@ function updateSubcategories() {
         'Other': ['Wowcher Gift Card']
     };
 
+    const concepts = {
+        'Beauty': [
+                    "Hammam Spa Experience for 1",
+                    "Hammam Spa Experience for 2",
+                    "Spa day treatments and lunch for 1",
+                    "Spa day treatments and lunch for 2",
+                    "Spa day with lunch for 1",
+                    "Spa day with lunch for 2",
+                    "Spa day treatments & lunch for 1",
+                    "Spa day treatments & lunch for 2",
+                    "Spa day with Afternoon tea for 1",
+                    "Spa day with Afternoon tea for 2",
+                    "Spa day with Afternoon tea & bubbly for 1",
+                    "Spa day with Afternoon tea & bubbly for 2",
+                    "Spa day 3 treatments and voucher for 1",
+                    "Spa day 3 treatments and voucher for 2",
+                    "Spa Day - 3 Treatments & Prosecco for 1",
+                    "Spa Day - 3 Treatments & Prosecco for 2",
+                    "Spa Day - 3 Treatments & Prosecco & voucher for 1",
+                    "Spa Day - 3 Treatments & Prosecco & voucher for 2",
+                    "1 hour Choice of Massage",
+                    "6 Sessions Laser Hair Removal",
+                    "Teeth Whitening",
+                    "0.5ml Lip Filler",
+                    "Dental Composite Bonding for 4 teeth",
+                    "Colonic Hydrotherapy",
+                    "60 min Hydrafacial",
+                    "Full Body Aromatherapy Massage for 1",
+                    "Spa day 2 treatments and voucher for 1",
+                    "Spa day 2 treatments and voucher for 2",
+                    "Spa Day - 2 Treatments & Prosecco for 1",
+                    "Spa Day - 2 Treatments & Prosecco for 2",
+                    "Spa Day - 2 Treatments & Prosecco & voucher for 1",
+                    "Spa Day - 2 Treatments & Prosecco & voucher for 2"
+                ],
+        'Activities': [
+                    "Christmas theatre ticket for 1",
+                    "Festival entry for 1",
+                    "Zoo Entry for 1",
+                    "Zoo Family ticket",
+                    "Theme park entry for 2",
+                    "Theme park entry for 4",
+                    "Theme park entry for 1",
+                    "Theme Park season pass for 1",
+                    "24 hour hop on hop off bus tour",
+                    "48 hour hop on hof off bus tour",
+                    "Bus Tour with Afternoon Tea",
+                    "BYOB Pottery Workshop",
+                    "Pottery workshop",
+                    "1 hour aquapark session for 1",
+                    "90 min aquapark session for 1",
+                    "Supercar Driving Experience",
+                    "Junior sportscar driving experience",
+                    "Scuba diving lesson for 1",
+                    "Lorry Driving experience for 1",
+                    "Segway experience for 1",
+                    "60 min Puppy Yoga for 1",
+                    "Circus entry for 1",
+                    "Day coach trip for 1",
+                    "Skiing or snowboarding day course for 1",
+                    "Softplay entry meal and drink for 1",
+                    "Softplay entry meal and drink for 2",
+                    "Softplay entry meal and drink for 4",
+                    "one hour Climbing session for 1",
+                    "one hour Climbing session for 2",
+                    "one hour Climbing session for 4",
+                    "2 hour Animal experience for 2",
+                    "Paintballing for 5",
+                    "Paintballing for 10",
+                    "Canal boat hire for 10",
+                    "Canal boat hire for 6",
+                    "Alpaca walk + tea for 1",
+                    "Alpaca walk + tea for 2",
+                    "90 min Alpaca walking experience for 1",
+                    "90 min Alpaca walking experience for 2",
+                    "Alpaca feeding experience",
+                    "Petting zoo entry for 1",
+                    "Adventure Park entry for 1",
+                    "Inflatable park day with lunch for 1",
+                    "Museum Entry for 1",
+                    "Exhibition/gardens entry for 1",
+                    "Exhibition/gardens entry for 2",
+                    "Flight simulator experience for 1",
+                    "Aircraft Flying lesson for 60 mins",
+                    "Aircraft Flying lesson for 90 mins",
+                    "Family farm ticket for 4",
+                    "Brewery tour for 1 with beers",
+                    "Christmas immersive experience for 1",
+                    "Christmas light show for 1",
+                    "Pumpkin picking for 1",
+                    "Drag show for 1",
+                    "Cabaret show with cocktails for 1",
+                    "Go karting for 1",
+                    "Steam train driver experience",
+                    "Quad biking experience for 1",
+                    "Quad biking experience for 2",
+                    "Junior zookeeper experience",
+                    "Family photoshoot, 3 prints and a voucher",
+                    "Boudoir photoshoot, 3 prints and a voucher",
+                    "Couples photoshoot 3 prints and a voucher",
+                    "Name a star personalised gift",
+                    "Archery experience for 2 for 1 hour",
+                    "Psychic tarot card reading",
+                    "1 hour axe throwing experience",
+                    "Adopt an animal package with certificate and a photo",
+                    "Goat walking experience",
+                    "Meerkat experience for 1 with cream tea",
+                    "Meerkat experience for 2 with cream tea",
+                    "Meerkat experience with zoo entry for 1",
+                    "Meerkat experience with zoo entry for 2",
+                    "Immersive VR experience for 1",
+                    "Immersive VR experience for 2",
+                    "Immersive VR experience for 4",
+                    "30 min Golf lessons",
+                    "Crazy golf for 1",
+                    "Crazy golf for 2",
+                    "Crazy golf for 4",
+                    "Crazy golf with a drink for 1",
+                    "Crazy golf with a drink for 2",
+                    "Crazy golf with a drink for 4",
+                    "90 min iceskating session for 1",
+                    "60 min iceskating session for 1",
+                    "1 hour jump session trampoline park for 1",
+                    "2 hour jump session trampoline park for 1",
+                    "River cruise for 1",
+                    "2 hour Cooking/Baking class for 1",
+                    "2 hour Cooking/Baking class for 2",
+                    "Chocolate making workshop for 2",
+                    "Sushi Making for 1",
+                    "Sushi Making for 2",
+                    "Tribute Act show entry for 1",
+                    "Theatre show ticket for 1",
+                    "Gin school for 1",
+                    "Beer school for 1"
+                ],
+        'Restaurants & Bars': [
+                                "12 dish tasting menu and champagne",
+                                "2 course dining for 2",
+                                "2 course dining for 2 with a glass of wine",
+                                "2 course Teppanyaki dining for 2",
+                                "3 course dining for 2 with a bottle of wine",
+                                "3 course dining for 2 with a glass of wine",
+                                "Afternoon Tea for 2",
+                                "Afternoon Tea for 2 with Prosecco/champagne",
+                                "Alpaca walk and afternoon tea for 2",
+                                "Bottomless Afternoon tea for 1",
+                                "Bottomless brunch for 1",
+                                "Bottomless brunch for 2",
+                                "Brunch for 2",
+                                "Burger, fries and drink for 2",
+                                "Bus tour with Afternoon tea",
+                                "Dinner and a cocktail for 2",
+                                "Premium 3 course dining for 2",
+                                "Premium afternoon tea for 2",
+                                "Sunday Roast with wine",
+                                "Superyacht afternoon tea for 2",
+                                "Tapas and cocktails or wine for 2",
+                                "Unlimited Sushi",
+                                "Steak Dining and a glass of Wine",
+                                "Chinese Dining with a side and a drink",
+                                "5 course Teppanyaki Dining for 2",
+                                "Pizza and a flight of beers"
+                            ]
+    };
+
     const categorySelect = document.getElementById("category");
     const subcategorySelect = document.getElementById("subcategory");
+    const conceptSelect = document.getElementById("concept");
     const selectedCategory = categorySelect.options[categorySelect.selectedIndex].value;
 
     // Clear existing subcategory options
@@ -192,6 +422,44 @@ function updateSubcategories() {
             subcategorySelect.add(option);
         });
     }
+
+    // Clear existing concept options
+    conceptSelect.innerHTML = "";
+
+    // Add new concept options
+    if (selectedCategory in concepts) {
+        concepts[selectedCategory].forEach(function(concept) {
+            const option = document.createElement("option");
+            option.value = concept;
+            option.text = concept;
+            conceptSelect.add(option);
+        });
+    }
+    else {
+       const option = document.createElement("option");
+       option.value = "N/A";
+       option.text = "N/A";
+       conceptSelect.add(option);
+    }
+}
+
+function updateMatchType() {
+
+  const matchTypeSelect = document.getElementById("match_type");
+  const selectedMatchType = matchTypeSelect.options[matchTypeSelect.selectedIndex].value;
+
+  if ( selectedMatchType == "Concept" ) {
+
+    document.querySelector('.subcat_filter').classList.add('hidden');
+    document.querySelector('.concept_filter').classList.remove('hidden');
+
+  }
+  else {
+
+    document.querySelector('.subcat_filter').classList.remove('hidden');
+    document.querySelector('.concept_filter').classList.add('hidden');
+  }
+
 }
 
 function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff, varName) {
@@ -200,11 +468,11 @@ function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff,
 
         if ( scoreCoeff > 0 ) {
 
-            return [Math.abs(scoreCoeff*3), varName+" above Upper Quartile Value, maximum score achieved.",0]
+            return [Math.abs(scoreCoeff*3), varName+" above Upper Quartile Value, maximum score achieved.",0,0]
         }
         else {
 
-            return [0, varName+" above Upper Quartile Value, minimum score achieved. Reach a value below "+upperQuartile+" to remove this penalty",Math.abs(scoreCoeff*3)]
+            return [0, varName+" above Upper Quartile Value, minimum score achieved. Reach a value below <b>"+upperQuartile+"</b> to remove this penalty.",Math.abs(scoreCoeff*3),Math.abs(scoreCoeff)*2]
         }
             
     }
@@ -212,11 +480,11 @@ function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff,
 
         if ( scoreCoeff > 0 ) {
 
-            return [0, varName+" below Lower Quartile Value, minimum score achieved. Reach a value above "+lowerQuartile+" to remove this penalty",Math.abs(scoreCoeff*3)]
+            return [0, varName+" below Lower Quartile Value, minimum score achieved. Reach a value above <b>"+lowerQuartile+"</b> to remove this penalty.",Math.abs(scoreCoeff*3),Math.abs(scoreCoeff)*2]
         }
         else {
 
-            return [Math.abs(scoreCoeff)*3, varName+" below Lower Quartile Value, maximum score achieved.",0]
+            return [Math.abs(scoreCoeff)*3, varName+" below Lower Quartile Value, maximum score achieved.",0,0]
         }
 
     }
@@ -224,11 +492,11 @@ function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff,
 
         if ( scoreCoeff > 0 ) {
 
-            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value above "+upperQuartile+" to maximise score.",Math.abs(scoreCoeff)]
+            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value above <b>"+upperQuartile+"</b> to maximise score.",Math.abs(scoreCoeff),Math.abs(scoreCoeff)*1]
         }
         else {
 
-            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value below "+lowerQuartile+" to maximise score.",Math.abs(scoreCoeff)]
+            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value below <b>"+lowerQuartile+"</b> to maximise score.",Math.abs(scoreCoeff),Math.abs(scoreCoeff)*1]
         }
 
     }
@@ -251,18 +519,18 @@ function calculateResults(result, type) {
 
     var coeffPrice = result["coeff_price"];
     var meanPrice = result["mean_price"];
-    var medianPrice = result["median_price"];
-    var upperPrice = result["upperQuartile_price"];
-    var lowerPrice = result["lowerQuartile_price"];
+    var medianPrice = result["median_price_wght"];
+    var upperPrice = result["upperQuartile_price_wght"];
+    var lowerPrice = result["lowerQuartile_price_wght"];
     var calcPrice = price * coeffPrice;
     var meanCalcPrice = meanPrice * coeffPrice;
     var medianCalcPrice = medianPrice * coeffPrice;
     var priceDelta = meanCalcPrice - calcPrice;
     var medianPriceDelta = medianCalcPrice - calcPrice;
 
-    var [priceScoringVsAverage, priceMessaging, priceDefecit] = scoreVsAverage(price, lowerPrice, medianPrice, upperPrice, priceScoring, "Price");
+    var [priceScoringVsAverage, priceMessaging, priceDefecit, priceNextIncrement] = scoreVsAverage(price, lowerPrice, medianPrice, upperPrice, priceScoring, "Price");
     var priceMaxAttainable = priceScoringVsAverage + priceDefecit;
-    allMessaging.push([priceScoringVsAverage, priceMessaging, priceDefecit]);
+    allMessaging.push([priceScoringVsAverage, priceMessaging, priceDefecit, priceNextIncrement]);
 
     totalScore = totalScore + priceScoringVsAverage;
     maxScore = maxScore + priceMaxAttainable;
@@ -273,18 +541,18 @@ function calculateResults(result, type) {
 
     var coeffDiscountPercent = result["coeff_discount_pc"];
     var meanDiscountPercent = result["mean_discount_pc"];
-    var medianDiscountPercent = result["median_discount_pc"];
-    var upperDiscountPercent = result["upperQuartile_discount_pc"];
-    var lowerDiscountPercent = result["lowerQuartile_discount_pc"];
+    var medianDiscountPercent = result["median_discount_pc_wght"];
+    var upperDiscountPercent = result["upperQuartile_discount_pc_wght"];
+    var lowerDiscountPercent = result["lowerQuartile_discount_pc_wght"];
     var calcDiscountPercent = discountPercent * coeffDiscountPercent;
     var meanCalcDiscountPercent = meanDiscountPercent * coeffDiscountPercent;
     var medianCalcDiscountPercent = medianDiscountPercent * coeffDiscountPercent;
     var discountPercentDelta = meanCalcDiscountPercent - calcDiscountPercent;
     var medianDiscountPercentDelta = medianCalcDiscountPercent - calcDiscountPercent;
 
-    var [discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit] = scoreVsAverage(discountPercent, lowerDiscountPercent, medianDiscountPercent, upperDiscountPercent, discountPercentScoring, "Discount Percent");
+    var [discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit, discountPercentNextIncrement] = scoreVsAverage(discountPercent, lowerDiscountPercent, medianDiscountPercent, upperDiscountPercent, discountPercentScoring, "Discount Percent");
     var discountPercentMaxAttainable = discountPercentScoringVsAverage + discountPercentDefecit;
-    allMessaging.push([discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit]);
+    allMessaging.push([discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit, discountPercentNextIncrement]);
  
     totalScore = totalScore + discountPercentScoringVsAverage;
     maxScore = maxScore + discountPercentMaxAttainable;
@@ -295,18 +563,18 @@ function calculateResults(result, type) {
 
     var coeffWowcherFee = result["coeff_wowcher_fee"];
     var meanWowcherFee = result["mean_wowcher_fee"];
-    var medianWowcherFee = result["median_wowcher_fee"];
-    var upperWowcherFee = result["upperQuartile_wowcher_fee"];
-    var lowerWowcherFee = result["lowerQuartile_wowcher_fee"];
+    var medianWowcherFee = result["median_wowcher_fee_wght"];
+    var upperWowcherFee = result["upperQuartile_wowcher_fee_wght"];
+    var lowerWowcherFee = result["lowerQuartile_wowcher_fee_wght"];
     var calcWowcherFee = wowcherFee * coeffWowcherFee;
     var meanCalcWowcherFee = meanWowcherFee * coeffWowcherFee;
     var medianCalcWowcherFee = medianWowcherFee * coeffWowcherFee;
     var wowcherFeeDelta = meanCalcWowcherFee - calcWowcherFee;
     var medianWowcherFeeDelta = medianCalcWowcherFee - calcWowcherFee;
 
-    var [wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit] = scoreVsAverage(wowcherFee, lowerWowcherFee, medianWowcherFee, upperWowcherFee, wowcherFeeScoring, "Wowcher Fee");
+    var [wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit, wowcherFeeNextIncrement] = scoreVsAverage(wowcherFee, lowerWowcherFee, medianWowcherFee, upperWowcherFee, wowcherFeeScoring, "Wowcher Fee");
     var wowcherFeeMaxAttainable = wowcherFeeScoringVsAverage + wowcherFeeDefecit;
-    allMessaging.push([wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit]);
+    allMessaging.push([wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit, wowcherFeeNextIncrement]);
 
     totalScore = totalScore + wowcherFeeScoringVsAverage;
     maxScore = maxScore + wowcherFeeMaxAttainable;
@@ -317,18 +585,18 @@ function calculateResults(result, type) {
 
     var coeffMinDistance = result["coeff_min_distance_to_centre"];
     var meanMinDistance = result["mean_min_distance_to_centre"];
-    var medianMinDistance = result["median_min_distance_to_centre"];
-    var upperMinDistance = result["upperQuartile_min_distance_to_centre"];
-    var lowerMinDistance = result["lowerQuartile_min_distance_to_centre"];
+    var medianMinDistance = result["median_min_distance_to_centre_wght"];
+    var upperMinDistance = result["upperQuartile_min_distance_to_centre_wght"];
+    var lowerMinDistance = result["lowerQuartile_min_distance_to_centre_wght"];
     var calcMinDistance = minDistance * coeffMinDistance;
     var meanCalcMinDistance = meanMinDistance * coeffMinDistance;
     var medianCalcMinDistance = medianMinDistance * coeffMinDistance;
     var minDistanceDelta = meanCalcMinDistance - calcMinDistance;
     var medianMinDistanceDelta = medianCalcMinDistance - calcMinDistance;
 
-    var [minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit] = scoreVsAverage(minDistance, lowerMinDistance, medianMinDistance, upperMinDistance, minDistanceScoring, "Minimum Distance to City Centre");
+    var [minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit, minDistanceNextIncrement] = scoreVsAverage(minDistance, lowerMinDistance, medianMinDistance, upperMinDistance, minDistanceScoring, "Minimum Distance to City Centre");
     var minDistanceMaxAttainable = minDistanceScoringVsAverage + minDistanceDefecit;
-    allMessaging.push([minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit]);
+    allMessaging.push([minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit, minDistanceNextIncrement]);
 
     totalScore = totalScore + minDistanceScoringVsAverage;
     maxScore = maxScore + minDistanceMaxAttainable;
@@ -339,18 +607,18 @@ function calculateResults(result, type) {
 
     var coeffUniqueCities = result["coeff_unique_cities"];
     var meanUniqueCities = result["mean_unique_cities"];
-    var medianUniqueCities = result["median_unique_cities"];
-    var upperUniqueCities = result["upperQuartile_unique_cities"];
-    var lowerUniqueCities = result["lowerQuartile_unique_cities"];
+    var medianUniqueCities = result["median_unique_cities_wght"];
+    var upperUniqueCities = result["upperQuartile_unique_cities_wght"];
+    var lowerUniqueCities = result["lowerQuartile_unique_cities_wght"];
     var calcUniqueCities = uniqueCities * coeffUniqueCities;
     var meanCalcUniqueCities = meanUniqueCities * coeffUniqueCities;
     var medianCalcUniqueCities = medianUniqueCities * coeffUniqueCities;
     var uniqueCitiesDelta = meanCalcUniqueCities - calcUniqueCities;
     var medianUniqueCitiesDelta = medianCalcUniqueCities - calcUniqueCities;
 
-    var [uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit] = scoreVsAverage(uniqueCities, lowerUniqueCities, medianUniqueCities, upperUniqueCities, uniqueCitiesScoring, "Unique Cities with Location");
+    var [uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit, uniqueCitiesNextIncrement] = scoreVsAverage(uniqueCities, lowerUniqueCities, medianUniqueCities, upperUniqueCities, uniqueCitiesScoring, "Unique Cities with Location");
     var uniqueCitiesMaxAttainable = uniqueCitiesScoringVsAverage + uniqueCitiesDefecit;
-    allMessaging.push([uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit]);
+    allMessaging.push([uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit, uniqueCitiesNextIncrement]);
 
     totalScore = totalScore + uniqueCitiesScoringVsAverage;
     maxScore = maxScore + uniqueCitiesMaxAttainable;
@@ -361,36 +629,85 @@ function calculateResults(result, type) {
 
     var coeffTotalLocs = result["coeff_total_locs"];
     var meanTotalLocs = result["mean_total_locs"];
-    var medianTotalLocs = result["median_total_locs"];
-    var upperTotalLocs = result["upperQuartile_total_locs"];
-    var lowerTotalLocs = result["lowerQuartile_total_locs"];
+    var medianTotalLocs = result["median_total_locs_wght"];
+    var upperTotalLocs = result["upperQuartile_total_locs_wght"];
+    var lowerTotalLocs = result["lowerQuartile_total_locs_wght"];
     var calcTotalLocs = totalLocs * coeffTotalLocs;
     var meanCalcTotalLocs = meanTotalLocs * coeffTotalLocs;
     var medianCalcTotalLocs = medianTotalLocs * coeffTotalLocs;
     var totalLocsDelta = meanCalcTotalLocs - calcTotalLocs;
     var medianTotalLocsDelta = medianCalcTotalLocs - calcTotalLocs;
 
-    var [totalLocsScoringVsAverage, totalLocsMessaging, totalLocsDefecit] = scoreVsAverage(totalLocs, lowerTotalLocs, medianTotalLocs, upperTotalLocs, totalLocsScoring, "Total Locations");
-    var totalLocsMaxAttainable = totalLocsScoringVsAverage + totalLocsDefecit;
-    allMessaging.push([totalLocsScoringVsAverage, totalLocsMessaging, totalLocsDefecit]);
+    //var [totalLocsScoringVsAverage, totalLocsMessaging, totalLocsDefecit, totalLocsNextIncrement] = scoreVsAverage(totalLocs, lowerTotalLocs, medianTotalLocs, upperTotalLocs, totalLocsScoring, "Total Locations");
+    //var totalLocsMaxAttainable = totalLocsScoringVsAverage + totalLocsDefecit;
+    //allMessaging.push([totalLocsScoringVsAverage, totalLocsMessaging, totalLocsDefecit, totalLocsNextIncrement]);
 
-    totalScore = totalScore + totalLocsScoringVsAverage;
-    maxScore = maxScore + totalLocsMaxAttainable;
+    //totalScore = totalScore + totalLocsScoringVsAverage;
+    //maxScore = maxScore + totalLocsMaxAttainable;
+
+
+    var reviewCount = document.getElementById("google_review_count").value;
+    var reviewCountScoring = 1;
+
+    var meanReviewCount = 50;
+    var medianReviewCount = 50;
+    var upperReviewCount = 100;
+    var lowerReviewCount = 20;
+
+    var [reviewCountScoringVsAverage, reviewCountMessaging, reviewCountDefecit, reviewCountNextIncrement] = scoreVsAverage(reviewCount, lowerReviewCount, medianReviewCount, upperReviewCount, reviewCountScoring, "Google Review Count");
+    var reviewCountMaxAttainable = reviewCountScoringVsAverage + reviewCountDefecit;
+    allMessaging.push([reviewCountScoringVsAverage, reviewCountMessaging, reviewCountDefecit, reviewCountNextIncrement]);
+
+    totalScore = totalScore + reviewCountScoringVsAverage;
+    maxScore = maxScore + reviewCountMaxAttainable;
+
+    if ( reviewCount > 0 ) {
+
+        var reviewScore = document.getElementById("google_review_score").value;
+        var reviewScoreScoring = 1;
+
+        var meanReviewScore = 3.5;
+        var medianReviewScore = 3.6;
+        var upperReviewScore = 4.2;
+        var lowerReviewScore = 3.0;
+
+        var [reviewScoreScoringVsAverage, reviewScoreMessaging, reviewScoreDefecit, reviewScoreNextIncrement] = scoreVsAverage(reviewScore, lowerReviewScore, medianReviewScore, upperReviewScore, reviewScoreScoring, "Google Review Score");
+        var reviewScoreMaxAttainable = reviewScoreScoringVsAverage + reviewScoreDefecit;
+        allMessaging.push([reviewScoreScoringVsAverage, reviewScoreMessaging, reviewScoreDefecit, reviewScoreNextIncrement]);
+
+        totalScore = totalScore + reviewScoreScoringVsAverage;
+        maxScore = maxScore + reviewScoreMaxAttainable;
+
+    }
+
 
     var finalRevPrediction = calcConstant + calcPrice + calcDiscountPercent + calcWowcherFee + calcMinDistance + calcUniqueCities + calcTotalLocs;
     var finalMeanRevPrediction = calcConstant + meanCalcPrice + meanCalcDiscountPercent + meanCalcWowcherFee + meanCalcMinDistance + meanCalcUniqueCities + meanCalcTotalLocs;
-    //var finalMedianRevPrediction = calcConstant + medianCalcPrice + medianCalcDiscountPercent + medianCalcWowcherFee + medianCalcMinDistance + medianCalcUniqueCities + medianCalcTotalLocs;
-
-    var finalMedianRevPrediction = calcConstant + medianCalcPrice + medianCalcDiscountPercent + medianCalcWowcherFee + medianCalcMinDistance;
+    var finalMedianRevPrediction = calcConstant + medianCalcPrice + medianCalcDiscountPercent + medianCalcWowcherFee + medianCalcMinDistance + medianCalcUniqueCities + medianCalcTotalLocs;
 
     var meanRev = result["mean_thirty_day_net"];
     var medianRev = result["median_thirty_day_net"];
+    var maxRev = result["max_thirty_day_net"];
+    var minRev = result["min_thirty_day_net"];
+    var upperRev = result["upperQuartile_thirty_day_net"];
+    var lowerRev = result["lowerQuartile_thirty_day_net"];
+
+    var medianRevPerLoc = result["median_thirty_day_net_per_loc"];
+    var maxRevPerLoc = result["max_thirty_day_net_per_loc"];
+    var minRevPerLoc = result["min_thirty_day_net_per_loc"];
+    var upperRevPerLoc = result["upperQuartile_thirty_day_net_per_loc"];
+    var lowerRevPerLoc = result["lowerQuartile_thirty_day_net_per_loc"];
 
 
+    var scoreBasedPrediction = predictRevenue(totalScore, maxScore, minRevPerLoc, lowerRevPerLoc, medianRevPerLoc, upperRevPerLoc, maxRevPerLoc, totalLocs);
     
-    console.log("Used method: "+type);
+    var exampleDeals = result["deal_ids"];
 
-    renderResults(allMessaging, totalScore, maxScore);
+    jQuery("#technicalMessaging").append("<div>Used method: "+type+"</div>");
+    jQuery("#technicalMessaging").append("<div>Median 30 Day Net Rev: &pound"+round(medianRev,2)+"</div>");
+    jQuery("#technicalMessaging").append("<div>Mean 30 Day Net Rev: &pound"+round(meanRev,2)+"</div>");
+
+    renderResults(allMessaging, totalScore, maxScore,  minRevPerLoc, lowerRevPerLoc, medianRevPerLoc, upperRevPerLoc, maxRevPerLoc, scoreBasedPrediction, exampleDeals, totalLocs);
 
 }
 
@@ -425,21 +742,94 @@ function getPastelColor(value, maxVal) {
     return `#${hexColor}`;
 }
 
-function renderResults(allMessaging, totalScore, maxScore) {
+function round(num, dp) {
+
+    let factor = Math.pow(10, dp);
+    let roundedNum = Math.round(num * factor) / factor;
+    
+    return roundedNum.toFixed(dp);
+}
+
+function predictRevenue(score, maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, totalLocs) {
+    // Normalize the score
+    const normalizedScore = score / maxScore;
+
+    // Determine which revenue range the normalized score falls into
+    let predictedRevenue;
+
+    if (normalizedScore <= 1/3) {
+        // Interpolate between minRevenue and lowerQuartileRevenue
+        const fraction = normalizedScore / (1/3);
+        predictedRevenue = minRevenue + fraction * (lowerQuartileRevenue - minRevenue);
+    } else if (normalizedScore <= 2/3) {
+        // Interpolate between lowerQuartileRevenue and medianRevenue
+        const fraction = (normalizedScore - 1/3) / (1/3);
+        predictedRevenue = lowerQuartileRevenue + fraction * (medianRevenue - lowerQuartileRevenue);
+    } else if (normalizedScore <= 1) {
+        // Interpolate between medianRevenue and upperQuartileRevenue
+        const fraction = (normalizedScore - 2/3) / (1/3);
+        predictedRevenue = medianRevenue + fraction * (upperQuartileRevenue - medianRevenue);
+    } else {
+        // Cap the score at maxScore, just in case it's over
+        predictedRevenue = maxRevenue;
+    }
+
+    predictedRevenue = predictedRevenue * totalLocs;
+
+    return predictedRevenue;
+}
+
+function parseDealIds(dealString) {
+    const pairs = dealString.split('|');
+
+    let table = '<table border="1">';
+    table += '<tr><th>Deal ID</th><th>30 Day Net Revenue</th></tr>';
+
+    pairs.forEach(pair => {
+        var [deal_id, thirtyDayNet] = pair.split(':');
+
+        deal_id = Math.round(deal_id);
+
+        table += `<tr><td>${deal_id}</td><td>${thirtyDayNet}</td></tr>`;
+    });
+
+    table += '</table>';
+
+    return table;
+}
+
+
+function renderResults(allMessaging, totalScore, maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, scoreBasedPrediction, exampleDeals, totalLocs) {
 
     jQuery("#messaging").empty();
     jQuery("#finalScore").empty();
-
+    jQuery("#predictedRev").empty();
+    jQuery("#exampleDeals").empty();
 
     var sortedArray = allMessaging.sort((a, b) => b[2] - a[2]);
 
     for (i=0; i<sortedArray.length; i++) {
 
-        jQuery("#messaging").append('<div style="background-color:'+getPastelColor(sortedArray[i][2],6)+';width:100%;">'+sortedArray[i][1]+'</div>');
+        var uplift =  predictRevenue(totalScore+sortedArray[i][3], maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, totalLocs) - scoreBasedPrediction;
+
+        var upliftSentence = "";
+
+        if ( uplift > 0 ) {
+
+            upliftSentence = '  This would increase predicted revenue by <b>&pound'+round(uplift,2)+'</b>.'
+
+        }
+
+        jQuery("#messaging").append('<div style="border: black; border-radius: 1px; border-style: solid;padding: 4px; text-align: center; background-color:'+getPastelColor(sortedArray[i][2],6)+';width:100%;">'+sortedArray[i][1]+upliftSentence+'</div>');
 
     }
 
-    jQuery("#finalScore").append('<div>'+totalScore+'/'+maxScore+'</div>')
+    jQuery("#finalScore").append('<div>Final Score: <span style="font-weight:bold">'+totalScore+'/'+maxScore+'</span></div>');
 
+    jQuery("#predictedRev").append('<div>30 Day Predicted Net Revenue: <span style="font-weight:bold">&pound'+round(scoreBasedPrediction,2)+'</span></div>');
+
+    const htmlTable = parseDealIds(exampleDeals);
+
+    document.getElementById('exampleDeals').innerHTML = htmlTable;
 
 }
