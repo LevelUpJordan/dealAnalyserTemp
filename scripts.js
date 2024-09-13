@@ -184,7 +184,7 @@ function getData(type, location, region, category, subcategory, concept) {
 
             else {
 
-                jQuery("#technicalMessaging").append("<div>No Results</div>");
+                jQuery("#technicalMessaging").append("<div>Not Enough Data</div>");
 
                 return
 
@@ -464,7 +464,7 @@ function updateMatchType() {
 
 function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff, varName) {
 
-    if ( value > upperQuartile ) {
+    if ( value >= upperQuartile ) {
 
         if ( scoreCoeff > 0 ) {
 
@@ -476,7 +476,7 @@ function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff,
         }
             
     }
-    else if ( value < lowerQuartile ) {
+    else if ( value <= lowerQuartile ) {
 
         if ( scoreCoeff > 0 ) {
 
