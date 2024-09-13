@@ -3,6 +3,18 @@
     <link rel="stylesheet" href="styles.css">
     <script src="scripts.js"></script>
     <style>
+        body, h1, h2, h3, p, div {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            line-height: 1.6;
+        }
+
         .clearfix::after {
             content: "";
             display: table;
@@ -10,17 +22,16 @@
         }
 
         .filter {
-            padding-bottom:5px;
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            vertical-align: top;
         }
 
         .bordered {
-            border-bottom: #eb008c;
-            border-width: medium;
-            border-style: dotted;
-            border-right: none;
-            border-left: none;
-            border-top: none;
-            padding-bottom:10px;
+            border-bottom: 2px dotted #eb008c;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .hidden {
@@ -29,7 +40,115 @@
 
         table {
             font-size: 10px;
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
         }
+
+        table, th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            color: #333;
+        }
+
+        td {
+            background-color: #fff;
+        }
+
+        .wowcher-header {
+            width: 100%;
+            background: #ffebf7;
+            margin-bottom: 20px;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 5px solid #eb008c;
+        }
+
+        .wowcher-header img {
+            max-width: 120px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .input {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+
+        label {
+            display: block;
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+
+        select, input[type="number"] {
+            width: 120px;
+            height: 24px;
+            font-size: 10px;
+        }
+
+        button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #eb008c;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #d10079;
+        }
+
+        #resultsArea {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        #technicalMessaging, #finalScore, #predictedRev, #messaging {
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        #messaging div {
+            border: 1px solid #333;
+            border-radius: 3px;
+            padding: 8px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .alert-low {
+            background-color: #ffb3b3;
+        }
+
+        .alert-medium {
+            background-color: #d9d9b3;
+        }
+
+        .alert-high {
+            background-color: #bff2b3;
+        }
+
+        .alert-max {
+            background-color: #b3ffb3;
+        }
+
     </style>
 </head>
 
@@ -41,7 +160,7 @@
        <img alt="Logo" src="https://resources.wowcher.co.uk/images/wowcher-logo.svg" width="100" class="jsx-573716459 logo" style="padding: 10px;">
     </div>
 
-    
+    <div id="filters_container" style="padding:5px;">
     <div class="loc_filter filter">
         <label for="location">Location</label>
         <select id="location" name="Location" class="custom-select" style="width: 119px;height: 24px;">
@@ -72,7 +191,7 @@
             <option value="Wolverhampton|Midlands">Wolverhampton</option>
         </select>
     </div>
-
+    
     <div class="cat_filter filter">
         <label for="category">Category:</label>
         <select id="category" onchange="updateSubcategories()">
@@ -98,10 +217,122 @@
         </select>
     </div>
 
-    <div class="subcat_filter filter">
+    <div class="match_type filter">
+        <label for="match_type">Match Type:</label>
+        <select id="match_type" onchange="updateMatchType()">
+            <option value="Concept">Concept</option>
+            <option value="Subcategory">Subcategory</option>
+        </select>
+    </div>
+
+    <div class="subcat_filter filter hidden">
     <label for="subcategory">Subcategory:</label>
         <select id="subcategory">
             <option value="">Select a subcategory</option>
+        </select>
+    </div>
+
+    <div class="concept_filter filter">
+        <label for="concept">Concept:</label>
+        <select id="concept">
+            <option value="Christmas theatre ticket for 1">Christmas theatre ticket for 1</option>
+            <option value="Festival entry for 1">Festival entry for 1</option>
+            <option value="Zoo Entry for 1">Zoo Entry for 1</option>
+            <option value="Zoo Family ticket">Zoo Family ticket</option>
+            <option value="Theme park entry for 2">Theme park entry for 2</option>
+            <option value="Theme park entry for 4">Theme park entry for 4</option>
+            <option value="Theme park entry for 1">Theme park entry for 1</option>
+            <option value="Theme Park season pass for 1">Theme Park season pass for 1</option>
+            <option value="24 hour hop on hop off bus tour">24 hour hop on hop off bus tour</option>
+            <option value="48 hour hop on hop off bus tour">48 hour hop on hop off bus tour</option>
+            <option value="Bus Tour with Afternoon Tea">Bus Tour with Afternoon Tea</option>
+            <option value="BYOB Pottery Workshop">BYOB Pottery Workshop</option>
+            <option value="Pottery workshop">Pottery workshop</option>
+            <option value="1 hour aquapark session for 1">1 hour aquapark session for 1</option>
+            <option value="90 min aquapark session for 1">90 min aquapark session for 1</option>
+            <option value="Supercar Driving Experience">Supercar Driving Experience</option>
+            <option value="Junior sportscar driving experience">Junior sportscar driving experience</option>
+            <option value="Scuba diving lesson for 1">Scuba diving lesson for 1</option>
+            <option value="Lorry Driving experience for 1">Lorry Driving experience for 1</option>
+            <option value="Segway experience for 1">Segway experience for 1</option>
+            <option value="60 min Puppy Yoga for 1">60 min Puppy Yoga for 1</option>
+            <option value="Circus entry for 1">Circus entry for 1</option>
+            <option value="Day coach trip for 1">Day coach trip for 1</option>
+            <option value="Skiing or snowboarding day course for 1">Skiing or snowboarding day course for 1</option>
+            <option value="Softplay entry meal and drink for 1">Softplay entry meal and drink for 1</option>
+            <option value="Softplay entry meal and drink for 2">Softplay entry meal and drink for 2</option>
+            <option value="Softplay entry meal and drink for 4">Softplay entry meal and drink for 4</option>
+            <option value="one hour Climbing session for 1">one hour Climbing session for 1</option>
+            <option value="one hour Climbing session for 2">one hour Climbing session for 2</option>
+            <option value="one hour Climbing session for 4">one hour Climbing session for 4</option>
+            <option value="2 hour Animal experience for 2">2 hour Animal experience for 2</option>
+            <option value="Paintballing for 5">Paintballing for 5</option>
+            <option value="Paintballing for 10">Paintballing for 10</option>
+            <option value="Canal boat hire for 10">Canal boat hire for 10</option>
+            <option value="Canal boat hire for 6">Canal boat hire for 6</option>
+            <option value="Alpaca walk + tea for 1">Alpaca walk + tea for 1</option>
+            <option value="Alpaca walk + tea for 2">Alpaca walk + tea for 2</option>
+            <option value="90 min Alpaca walking experience for 1">90 min Alpaca walking experience for 1</option>
+            <option value="90 min Alpaca walking experience for 2">90 min Alpaca walking experience for 2</option>
+            <option value="Alpaca feeding experience">Alpaca feeding experience</option>
+            <option value="Petting zoo entry for 1">Petting zoo entry for 1</option>
+            <option value="Adventure Park entry for 1">Adventure Park entry for 1</option>
+            <option value="Inflatable park day with lunch for 1">Inflatable park day with lunch for 1</option>
+            <option value="Museum Entry for 1">Museum Entry for 1</option>
+            <option value="Exhibition/gardens entry for 1">Exhibition/gardens entry for 1</option>
+            <option value="Exhibition/gardens entry for 2">Exhibition/gardens entry for 2</option>
+            <option value="Flight simulator experience for 1">Flight simulator experience for 1</option>
+            <option value="Aircraft Flying lesson for 60 mins">Aircraft Flying lesson for 60 mins</option>
+            <option value="Aircraft Flying lesson for 90 mins">Aircraft Flying lesson for 90 mins</option>
+            <option value="Family farm ticket for 4">Family farm ticket for 4</option>
+            <option value="Brewery tour for 1 with beers">Brewery tour for 1 with beers</option>
+            <option value="Christmas immersive experience for 1">Christmas immersive experience for 1</option>
+            <option value="Christmas light show for 1">Christmas light show for 1</option>
+            <option value="Pumpkin picking for 1">Pumpkin picking for 1</option>
+            <option value="Drag show for 1">Drag show for 1</option>
+            <option value="Cabaret show with cocktails for 1">Cabaret show with cocktails for 1</option>
+            <option value="Go karting for 1">Go karting for 1</option>
+            <option value="Steam train driver experience">Steam train driver experience</option>
+            <option value="Quad biking experience for 1">Quad biking experience for 1</option>
+            <option value="Quad biking experience for 2">Quad biking experience for 2</option>
+            <option value="Junior zookeeper experience">Junior zookeeper experience</option>
+            <option value="Family photoshoot, 3 prints and a voucher">Family photoshoot, 3 prints and a voucher</option>
+            <option value="Boudoir photoshoot, 3 prints and a voucher">Boudoir photoshoot, 3 prints and a voucher</option>
+            <option value="Couples photoshoot 3 prints and a voucher">Couples photoshoot 3 prints and a voucher</option>
+            <option value="Name a star personalised gift">Name a star personalised gift</option>
+            <option value="Archery experience for 2 for 1 hour">Archery experience for 2 for 1 hour</option>
+            <option value="Psychic tarot card reading">Psychic tarot card reading</option>
+            <option value="1 hour axe throwing experience">1 hour axe throwing experience</option>
+            <option value="Adopt an animal package with certificate and a photo">Adopt an animal package with certificate and a photo</option>
+            <option value="Goat walking experience">Goat walking experience</option>
+            <option value="Meerkat experience for 1 with cream tea">Meerkat experience for 1 with cream tea</option>
+            <option value="Meerkat experience for 2 with cream tea">Meerkat experience for 2 with cream tea</option>
+            <option value="Meerkat experience with zoo entry for 1">Meerkat experience with zoo entry for 1</option>
+            <option value="Meerkat experience with zoo entry for 2">Meerkat experience with zoo entry for 2</option>
+            <option value="Immersive VR experience for 1">Immersive VR experience for 1</option>
+            <option value="Immersive VR experience for 2">Immersive VR experience for 2</option>
+            <option value="Immersive VR experience for 4">Immersive VR experience for 4</option>
+            <option value="30 min Golf lessons">30 min Golf lessons</option>
+            <option value="Crazy golf for 1">Crazy golf for 1</option>
+            <option value="Crazy golf for 2">Crazy golf for 2</option>
+            <option value="Crazy golf for 4">Crazy golf for 4</option>
+            <option value="Crazy golf with a drink for 1">Crazy golf with a drink for 1</option>
+            <option value="Crazy golf with a drink for 2">Crazy golf with a drink for 2</option>
+            <option value="Crazy golf with a drink for 4">Crazy golf with a drink for 4</option>
+            <option value="90 min iceskating session for 1">90 min iceskating session for 1</option>
+            <option value="60 min iceskating session for 1">60 min iceskating session for 1</option>
+            <option value="1 hour jump session trampoline park for 1">1 hour jump session trampoline park for 1</option>
+            <option value="2 hour jump session trampoline park for 1">2 hour jump session trampoline park for 1</option>
+            <option value="River cruise for 1">River cruise for 1</option>
+            <option value="2 hour Cooking/Baking class for 1">2 hour Cooking/Baking class for 1</option>
+            <option value="2 hour Cooking/Baking class for 2">2 hour Cooking/Baking class for 2</option>
+            <option value="Chocolate making workshop for 2">Chocolate making workshop for 2</option>
+            <option value="Sushi Making for 1">Sushi Making for 1</option>
+            <option value="Sushi Making for 2">Sushi Making for 2</option>
+            <option value="Tribute Act show entry for 1">Tribute Act show entry for 1</option>
+            <option value="Theatre show ticket for 1">Theatre show ticket for 1</option>
+            <option value="Gin school for 1">Gin school for 1</option>
+            <option value="Beer school for 1">Beer school for 1</option>
         </select>
     </div>
 
@@ -135,12 +366,31 @@
         <input type="number" id="unique_cities" name="unique_cities" min="1" max="100" step="1" value="1">
     </div>
 
+    <div class="input google_review_score">
+        <label for="google_review_score">Google Review Score:</label>
+        <input type="number" id="google_review_score" name="google_review_score" min="0" max="5" step="0.1" value="0">
+    </div>
+
+    <div class="input google_review_count">
+        <label for="google_review_count">Google Review Count:</label>
+        <input type="number" id="google_review_count" name="google_review_count" min="0" max="5000" step="1" value="0">
+    </div>
+
     <button onclick="onInitialSubmit()">Submit</button>
+    </div>
 
     <div id="resultsArea">
-        <div id="messaging">
+        <div id="technicalMessaging">
         </div>
         <div id="finalScore">
+        </div>
+        <div id="predictedRev">
+        </div>
+        <div id="messaging">
+        </div>
+        <div id="averageRevs">
+        </div>
+        <div id="exampleDeals">
         </div>
     </div>
 
