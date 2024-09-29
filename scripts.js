@@ -1,4 +1,4 @@
-console.log("0.34");
+console.log("0.40");
 
 function buildMongoQuery(type, location, region, category, subcategory, concept) {
 
@@ -462,47 +462,6 @@ function updateMatchType() {
 
 }
 
-function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff, varName) {
-
-    if ( value >= upperQuartile ) {
-
-        if ( scoreCoeff > 0 ) {
-
-            return [Math.abs(scoreCoeff*3), varName+" above Upper Quartile Value, maximum score achieved.",0,0]
-        }
-        else {
-
-            return [0, varName+" above Upper Quartile Value, minimum score achieved. Reach a value below <b>"+upperQuartile+"</b> to remove this penalty.",Math.abs(scoreCoeff*3),Math.abs(scoreCoeff)*2]
-        }
-            
-    }
-    else if ( value <= lowerQuartile ) {
-
-        if ( scoreCoeff > 0 ) {
-
-            return [0, varName+" below Lower Quartile Value, minimum score achieved. Reach a value above <b>"+lowerQuartile+"</b> to remove this penalty.",Math.abs(scoreCoeff*3),Math.abs(scoreCoeff)*2]
-        }
-        else {
-
-            return [Math.abs(scoreCoeff)*3, varName+" below Lower Quartile Value, maximum score achieved.",0,0]
-        }
-
-    }
-    else {
-
-        if ( scoreCoeff > 0 ) {
-
-            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value above <b>"+upperQuartile+"</b> to maximise score.",Math.abs(scoreCoeff),Math.abs(scoreCoeff)*1]
-        }
-        else {
-
-            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value below <b>"+lowerQuartile+"</b> to maximise score.",Math.abs(scoreCoeff),Math.abs(scoreCoeff)*1]
-        }
-
-    }
-
-
-}
 
 function calculateResults(result, type) {
 
@@ -512,25 +471,17 @@ function calculateResults(result, type) {
     var totalScore = 0;
     var maxScore = 0;
 
-    var calcConstant = result["coeff_const"];
-
     var price = document.getElementById("price").value;
-    var priceScoring = -2;
+    var priceScoring = -4;
 
-    var coeffPrice = result["coeff_price"];
-    var meanPrice = result["mean_price"];
-    var medianPrice = result["median_price_wght"];
-    var upperPrice = result["upperQuartile_price_wght"];
-    var lowerPrice = result["lowerQuartile_price_wght"];
-    var calcPrice = price * coeffPrice;
-    var meanCalcPrice = meanPrice * coeffPrice;
-    var medianCalcPrice = medianPrice * coeffPrice;
-    var priceDelta = meanCalcPrice - calcPrice;
-    var medianPriceDelta = medianCalcPrice - calcPrice;
+    var meanPrice = round(result["mean_price"],0);
+    var medianPrice = round(result["median_price_wght"],0);
+    var upperPrice = round(result["upperQuartile_price_wght"],0);
+    var lowerPrice = round(result["lowerQuartile_price_wght"],0);
 
-    var [priceScoringVsAverage, priceMessaging, priceDefecit, priceNextIncrement] = scoreVsAverage(price, lowerPrice, medianPrice, upperPrice, priceScoring, "Price");
+    var [priceScoringVsAverage, priceMessaging, priceDefecit, priceNextIncrement, priceTarget] = scoreVsAverage(price, lowerPrice, medianPrice, upperPrice, priceScoring, "Price");
     var priceMaxAttainable = priceScoringVsAverage + priceDefecit;
-    allMessaging.push([priceScoringVsAverage, priceMessaging, priceDefecit, priceNextIncrement]);
+    allMessaging.push([priceScoringVsAverage, priceMessaging, priceDefecit, priceNextIncrement, "price", priceTarget]);
 
     totalScore = totalScore + priceScoringVsAverage;
     maxScore = maxScore + priceMaxAttainable;
@@ -539,20 +490,14 @@ function calculateResults(result, type) {
     var discountPercent = document.getElementById("discount_pc").value;
     var discountPercentScoring = 1;
 
-    var coeffDiscountPercent = result["coeff_discount_pc"];
-    var meanDiscountPercent = result["mean_discount_pc"];
-    var medianDiscountPercent = result["median_discount_pc_wght"];
-    var upperDiscountPercent = result["upperQuartile_discount_pc_wght"];
-    var lowerDiscountPercent = result["lowerQuartile_discount_pc_wght"];
-    var calcDiscountPercent = discountPercent * coeffDiscountPercent;
-    var meanCalcDiscountPercent = meanDiscountPercent * coeffDiscountPercent;
-    var medianCalcDiscountPercent = medianDiscountPercent * coeffDiscountPercent;
-    var discountPercentDelta = meanCalcDiscountPercent - calcDiscountPercent;
-    var medianDiscountPercentDelta = medianCalcDiscountPercent - calcDiscountPercent;
+    var meanDiscountPercent = round(result["mean_discount_pc"],0);
+    var medianDiscountPercent = round(result["median_discount_pc_wght"],0);
+    var upperDiscountPercent = round(result["upperQuartile_discount_pc_wght"],0);
+    var lowerDiscountPercent = round(result["lowerQuartile_discount_pc_wght"],0);
 
-    var [discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit, discountPercentNextIncrement] = scoreVsAverage(discountPercent, lowerDiscountPercent, medianDiscountPercent, upperDiscountPercent, discountPercentScoring, "Discount Percent");
+    var [discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit, discountPercentNextIncrement, discountPercentTarget] = scoreVsAverage(discountPercent, lowerDiscountPercent, medianDiscountPercent, upperDiscountPercent, discountPercentScoring, "Discount Percent");
     var discountPercentMaxAttainable = discountPercentScoringVsAverage + discountPercentDefecit;
-    allMessaging.push([discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit, discountPercentNextIncrement]);
+    allMessaging.push([discountPercentScoringVsAverage, discountPercentMessaging, discountPercentDefecit, discountPercentNextIncrement, "discount_pc", discountPercentTarget]);
  
     totalScore = totalScore + discountPercentScoringVsAverage;
     maxScore = maxScore + discountPercentMaxAttainable;
@@ -561,42 +506,30 @@ function calculateResults(result, type) {
     var wowcherFee = document.getElementById("wowcher_fee").value;
     var wowcherFeeScoring = 2;
 
-    var coeffWowcherFee = result["coeff_wowcher_fee"];
-    var meanWowcherFee = result["mean_wowcher_fee"];
-    var medianWowcherFee = result["median_wowcher_fee_wght"];
-    var upperWowcherFee = result["upperQuartile_wowcher_fee_wght"];
-    var lowerWowcherFee = result["lowerQuartile_wowcher_fee_wght"];
-    var calcWowcherFee = wowcherFee * coeffWowcherFee;
-    var meanCalcWowcherFee = meanWowcherFee * coeffWowcherFee;
-    var medianCalcWowcherFee = medianWowcherFee * coeffWowcherFee;
-    var wowcherFeeDelta = meanCalcWowcherFee - calcWowcherFee;
-    var medianWowcherFeeDelta = medianCalcWowcherFee - calcWowcherFee;
+    var meanWowcherFee = round(result["mean_wowcher_fee"],0);
+    var medianWowcherFee = round(result["median_wowcher_fee_wght"],0);
+    var upperWowcherFee = round(result["upperQuartile_wowcher_fee_wght"],0);
+    var lowerWowcherFee = round(result["lowerQuartile_wowcher_fee_wght"],0);
 
-    var [wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit, wowcherFeeNextIncrement] = scoreVsAverage(wowcherFee, lowerWowcherFee, medianWowcherFee, upperWowcherFee, wowcherFeeScoring, "Wowcher Fee");
-    var wowcherFeeMaxAttainable = wowcherFeeScoringVsAverage + wowcherFeeDefecit;
-    allMessaging.push([wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit, wowcherFeeNextIncrement]);
+    //var [wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit, wowcherFeeNextIncrement] = scoreVsAverage(wowcherFee, lowerWowcherFee, medianWowcherFee, upperWowcherFee, wowcherFeeScoring, "Wowcher Fee");
+    //var wowcherFeeMaxAttainable = wowcherFeeScoringVsAverage + wowcherFeeDefecit;
+    //allMessaging.push([wowcherFeeScoringVsAverage, wowcherFeeMessaging, wowcherFeeDefecit, wowcherFeeNextIncrement]);
 
-    totalScore = totalScore + wowcherFeeScoringVsAverage;
-    maxScore = maxScore + wowcherFeeMaxAttainable;
+    //totalScore = totalScore + wowcherFeeScoringVsAverage;
+    //maxScore = maxScore + wowcherFeeMaxAttainable;
 
     
     var minDistance = document.getElementById("centre_distance").value;
     var minDistanceScoring = -1;
 
-    var coeffMinDistance = result["coeff_min_distance_to_centre"];
-    var meanMinDistance = result["mean_min_distance_to_centre"];
-    var medianMinDistance = result["median_min_distance_to_centre_wght"];
-    var upperMinDistance = result["upperQuartile_min_distance_to_centre_wght"];
-    var lowerMinDistance = result["lowerQuartile_min_distance_to_centre_wght"];
-    var calcMinDistance = minDistance * coeffMinDistance;
-    var meanCalcMinDistance = meanMinDistance * coeffMinDistance;
-    var medianCalcMinDistance = medianMinDistance * coeffMinDistance;
-    var minDistanceDelta = meanCalcMinDistance - calcMinDistance;
-    var medianMinDistanceDelta = medianCalcMinDistance - calcMinDistance;
+    var meanMinDistance = round(result["mean_min_distance_to_centre"],0);
+    var medianMinDistance = round(result["median_min_distance_to_centre_wght"],0);
+    var upperMinDistance = round(result["upperQuartile_min_distance_to_centre_wght"],0);
+    var lowerMinDistance = round(result["lowerQuartile_min_distance_to_centre_wght"],0);
 
-    var [minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit, minDistanceNextIncrement] = scoreVsAverage(minDistance, lowerMinDistance, medianMinDistance, upperMinDistance, minDistanceScoring, "Minimum Distance to City Centre");
+    var [minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit, minDistanceNextIncrement, minDistanceTarget] = scoreVsAverage(minDistance, lowerMinDistance, medianMinDistance, upperMinDistance, minDistanceScoring, "Minimum Distance to City Centre");
     var minDistanceMaxAttainable = minDistanceScoringVsAverage + minDistanceDefecit;
-    allMessaging.push([minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit, minDistanceNextIncrement]);
+    allMessaging.push([minDistanceScoringVsAverage, minDistanceMessaging, minDistanceDefecit, minDistanceNextIncrement, "minDistance", minDistanceTarget]);
 
     totalScore = totalScore + minDistanceScoringVsAverage;
     maxScore = maxScore + minDistanceMaxAttainable;
@@ -605,38 +538,26 @@ function calculateResults(result, type) {
     var uniqueCities = document.getElementById("unique_cities").value;
     var uniqueCitiesScoring = 1;
 
-    var coeffUniqueCities = result["coeff_unique_cities"];
-    var meanUniqueCities = result["mean_unique_cities"];
-    var medianUniqueCities = result["median_unique_cities_wght"];
-    var upperUniqueCities = result["upperQuartile_unique_cities_wght"];
-    var lowerUniqueCities = result["lowerQuartile_unique_cities_wght"];
-    var calcUniqueCities = uniqueCities * coeffUniqueCities;
-    var meanCalcUniqueCities = meanUniqueCities * coeffUniqueCities;
-    var medianCalcUniqueCities = medianUniqueCities * coeffUniqueCities;
-    var uniqueCitiesDelta = meanCalcUniqueCities - calcUniqueCities;
-    var medianUniqueCitiesDelta = medianCalcUniqueCities - calcUniqueCities;
+    var meanUniqueCities = round(result["mean_unique_cities"],0);
+    var medianUniqueCities = round(result["median_unique_cities_wght"],0);
+    var upperUniqueCities = round(result["upperQuartile_unique_cities_wght"],0);
+    var lowerUniqueCities = round(result["lowerQuartile_unique_cities_wght"],0);
 
-    var [uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit, uniqueCitiesNextIncrement] = scoreVsAverage(uniqueCities, lowerUniqueCities, medianUniqueCities, upperUniqueCities, uniqueCitiesScoring, "Unique Cities with Location");
-    var uniqueCitiesMaxAttainable = uniqueCitiesScoringVsAverage + uniqueCitiesDefecit;
-    allMessaging.push([uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit, uniqueCitiesNextIncrement]);
+    //var [uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit, uniqueCitiesNextIncrement, uniqueCitiesTarget] = scoreVsAverage(uniqueCities, lowerUniqueCities, medianUniqueCities, upperUniqueCities, uniqueCitiesScoring, "Unique Cities with Location");
+    //var uniqueCitiesMaxAttainable = uniqueCitiesScoringVsAverage + uniqueCitiesDefecit;
+    //allMessaging.push([uniqueCitiesScoringVsAverage, uniqueCitiesMessaging, uniqueCitiesDefecit, uniqueCitiesNextIncrement, "uniqueCities", uniqueCitiesTarget]);
 
-    totalScore = totalScore + uniqueCitiesScoringVsAverage;
-    maxScore = maxScore + uniqueCitiesMaxAttainable;
+    //totalScore = totalScore + uniqueCitiesScoringVsAverage;
+    //maxScore = maxScore + uniqueCitiesMaxAttainable;
 
 
     var totalLocs = document.getElementById("total_locs").value;
     var totalLocsScoring = 1;
 
-    var coeffTotalLocs = result["coeff_total_locs"];
-    var meanTotalLocs = result["mean_total_locs"];
-    var medianTotalLocs = result["median_total_locs_wght"];
-    var upperTotalLocs = result["upperQuartile_total_locs_wght"];
-    var lowerTotalLocs = result["lowerQuartile_total_locs_wght"];
-    var calcTotalLocs = totalLocs * coeffTotalLocs;
-    var meanCalcTotalLocs = meanTotalLocs * coeffTotalLocs;
-    var medianCalcTotalLocs = medianTotalLocs * coeffTotalLocs;
-    var totalLocsDelta = meanCalcTotalLocs - calcTotalLocs;
-    var medianTotalLocsDelta = medianCalcTotalLocs - calcTotalLocs;
+    var meanTotalLocs = round(result["mean_total_locs"],0);
+    var medianTotalLocs = round(result["median_total_locs_wght"],0);
+    var upperTotalLocs = round(result["upperQuartile_total_locs_wght"],0);
+    var lowerTotalLocs = round(result["lowerQuartile_total_locs_wght"],0);
 
     //var [totalLocsScoringVsAverage, totalLocsMessaging, totalLocsDefecit, totalLocsNextIncrement] = scoreVsAverage(totalLocs, lowerTotalLocs, medianTotalLocs, upperTotalLocs, totalLocsScoring, "Total Locations");
     //var totalLocsMaxAttainable = totalLocsScoringVsAverage + totalLocsDefecit;
@@ -647,16 +568,16 @@ function calculateResults(result, type) {
 
 
     var reviewCount = document.getElementById("google_review_count").value;
-    var reviewCountScoring = 1;
+    var reviewCountScoring = 3;
 
     var meanReviewCount = 50;
     var medianReviewCount = 50;
     var upperReviewCount = 100;
     var lowerReviewCount = 20;
 
-    var [reviewCountScoringVsAverage, reviewCountMessaging, reviewCountDefecit, reviewCountNextIncrement] = scoreVsAverage(reviewCount, lowerReviewCount, medianReviewCount, upperReviewCount, reviewCountScoring, "Google Review Count");
+    var [reviewCountScoringVsAverage, reviewCountMessaging, reviewCountDefecit, reviewCountNextIncrement, reviewCountTarget] = scoreVsAverage(reviewCount, lowerReviewCount, medianReviewCount, upperReviewCount, reviewCountScoring, "Google Review Count");
     var reviewCountMaxAttainable = reviewCountScoringVsAverage + reviewCountDefecit;
-    allMessaging.push([reviewCountScoringVsAverage, reviewCountMessaging, reviewCountDefecit, reviewCountNextIncrement]);
+    allMessaging.push([reviewCountScoringVsAverage, reviewCountMessaging, reviewCountDefecit, reviewCountNextIncrement, "reviewCount", reviewCountTarget]);
 
     totalScore = totalScore + reviewCountScoringVsAverage;
     maxScore = maxScore + reviewCountMaxAttainable;
@@ -671,19 +592,14 @@ function calculateResults(result, type) {
         var upperReviewScore = 4.2;
         var lowerReviewScore = 3.0;
 
-        var [reviewScoreScoringVsAverage, reviewScoreMessaging, reviewScoreDefecit, reviewScoreNextIncrement] = scoreVsAverage(reviewScore, lowerReviewScore, medianReviewScore, upperReviewScore, reviewScoreScoring, "Google Review Score");
+        var [reviewScoreScoringVsAverage, reviewScoreMessaging, reviewScoreDefecit, reviewScoreNextIncrement, reviewScoreTarget] = scoreVsAverage(reviewScore, lowerReviewScore, medianReviewScore, upperReviewScore, reviewScoreScoring, "Google Review Score");
         var reviewScoreMaxAttainable = reviewScoreScoringVsAverage + reviewScoreDefecit;
-        allMessaging.push([reviewScoreScoringVsAverage, reviewScoreMessaging, reviewScoreDefecit, reviewScoreNextIncrement]);
+        allMessaging.push([reviewScoreScoringVsAverage, reviewScoreMessaging, reviewScoreDefecit, reviewScoreNextIncrement, "reviewScore", reviewScoreTarget]);
 
         totalScore = totalScore + reviewScoreScoringVsAverage;
         maxScore = maxScore + reviewScoreMaxAttainable;
 
     }
-
-
-    var finalRevPrediction = calcConstant + calcPrice + calcDiscountPercent + calcWowcherFee + calcMinDistance + calcUniqueCities + calcTotalLocs;
-    var finalMeanRevPrediction = calcConstant + meanCalcPrice + meanCalcDiscountPercent + meanCalcWowcherFee + meanCalcMinDistance + meanCalcUniqueCities + meanCalcTotalLocs;
-    var finalMedianRevPrediction = calcConstant + medianCalcPrice + medianCalcDiscountPercent + medianCalcWowcherFee + medianCalcMinDistance + medianCalcUniqueCities + medianCalcTotalLocs;
 
     var meanRev = result["mean_thirty_day_net"];
     var medianRev = result["median_thirty_day_net"];
@@ -698,8 +614,25 @@ function calculateResults(result, type) {
     var upperRevPerLoc = result["upperQuartile_thirty_day_net_per_loc"];
     var lowerRevPerLoc = result["lowerQuartile_thirty_day_net_per_loc"];
 
+    var meanUnits = result["mean_thirty_day_units"];
+    var medianUnits = result["median_thirty_day_units"];
+    var maxUnits = result["max_thirty_day_units"];
+    var minUnits = result["min_thirty_day_units"];
+    var upperUnits = result["upperQuartile_thirty_day_units"];
+    var lowerUnits = result["lowerQuartile_thirty_day_units"];
 
-    var scoreBasedPrediction = predictRevenue(totalScore, maxScore, minRevPerLoc, lowerRevPerLoc, medianRevPerLoc, upperRevPerLoc, maxRevPerLoc, totalLocs);
+    var medianUnitsPerLoc = result["median_thirty_day_units_per_loc"];
+    var maxUnitsPerLoc = result["max_thirty_day_units_per_loc"];
+    var minUnitsPerLoc = result["min_thirty_day_units_per_loc"];
+    var upperUnitsPerLoc = result["upperQuartile_thirty_day_units_per_loc"];
+    var lowerUnitsPerLoc = result["lowerQuartile_thirty_day_units_per_loc"];
+
+    console.log([totalScore, maxScore, minUnitsPerLoc, lowerUnitsPerLoc, medianUnitsPerLoc, upperUnitsPerLoc, maxUnitsPerLoc, totalLocs])
+
+
+    var scoreBasedUnitsPrediction = predictUnits(totalScore, maxScore, minUnitsPerLoc, lowerUnitsPerLoc, medianUnitsPerLoc, upperUnitsPerLoc, maxUnitsPerLoc, totalLocs);
+
+    var revPrediction = scoreBasedUnitsPrediction * price * wowcherFee/100
     
     var exampleDeals = result["deal_ids"];
 
@@ -707,7 +640,50 @@ function calculateResults(result, type) {
     jQuery("#technicalMessaging").append("<div>Median 30 Day Net Rev: &pound"+round(medianRev,2)+"</div>");
     jQuery("#technicalMessaging").append("<div>Mean 30 Day Net Rev: &pound"+round(meanRev,2)+"</div>");
 
-    renderResults(allMessaging, totalScore, maxScore,  minRevPerLoc, lowerRevPerLoc, medianRevPerLoc, upperRevPerLoc, maxRevPerLoc, scoreBasedPrediction, exampleDeals, totalLocs);
+    renderResults(allMessaging, totalScore, maxScore,  minUnitsPerLoc, lowerUnitsPerLoc, medianUnitsPerLoc, upperUnitsPerLoc, maxUnitsPerLoc, revPrediction, scoreBasedUnitsPrediction, exampleDeals, totalLocs, price, wowcherFee);
+
+}
+
+
+function scoreVsAverage(value, lowerQuartile, median, upperQuartile, scoreCoeff, varName) {
+
+    if ( value >= upperQuartile ) {
+
+        if ( scoreCoeff > 0 ) {
+
+            return [Math.abs(scoreCoeff*3), varName+" above Upper Quartile Value, maximum score achieved.",0,0,0]
+        }
+        else {
+
+            return [0, varName+" above Upper Quartile Value, minimum score achieved. Reach a value below <b>"+upperQuartile+"</b> to remove this penalty.",Math.abs(scoreCoeff*3),Math.abs(scoreCoeff)*2,upperQuartile]
+        }
+            
+    }
+    else if ( value <= lowerQuartile ) {
+
+        if ( scoreCoeff > 0 ) {
+
+            return [0, varName+" below Lower Quartile Value, minimum score achieved. Reach a value above <b>"+lowerQuartile+"</b> to remove this penalty.",Math.abs(scoreCoeff*3),Math.abs(scoreCoeff)*2,lowerQuartile]
+        }
+        else {
+
+            return [Math.abs(scoreCoeff)*3, varName+" below Lower Quartile Value, maximum score achieved.",0,0,0]
+        }
+
+    }
+    else {
+
+        if ( scoreCoeff > 0 ) {
+
+            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value above <b>"+upperQuartile+"</b> to maximise score.",Math.abs(scoreCoeff),Math.abs(scoreCoeff)*1, upperQuartile]
+        }
+        else {
+
+            return [Math.abs(scoreCoeff)*2, varName+" between Lower Quartile Value and Upper Quartile Value, average score achieved. Reach a value below <b>"+lowerQuartile+"</b> to maximise score.",Math.abs(scoreCoeff),Math.abs(scoreCoeff)*1, lowerQuartile]
+        }
+
+    }
+
 
 }
 
@@ -750,33 +726,34 @@ function round(num, dp) {
     return roundedNum.toFixed(dp);
 }
 
-function predictRevenue(score, maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, totalLocs) {
+function predictUnits(score, maxScore, minUnits, lowerQuartileUnits, medianUnits, upperQuartileUnits, maxUnits, totalLocs) {
+
     // Normalize the score
     const normalizedScore = score / maxScore;
 
     // Determine which revenue range the normalized score falls into
-    let predictedRevenue;
+    let predictedUnits;
 
     if (normalizedScore <= 1/3) {
         // Interpolate between minRevenue and lowerQuartileRevenue
         const fraction = normalizedScore / (1/3);
-        predictedRevenue = minRevenue + fraction * (lowerQuartileRevenue - minRevenue);
+        predictedUnits = minUnits + fraction * (lowerQuartileUnits - minUnits);
     } else if (normalizedScore <= 2/3) {
         // Interpolate between lowerQuartileRevenue and medianRevenue
         const fraction = (normalizedScore - 1/3) / (1/3);
-        predictedRevenue = lowerQuartileRevenue + fraction * (medianRevenue - lowerQuartileRevenue);
+        predictedUnits = lowerQuartileUnits + fraction * (medianUnits - lowerQuartileUnits);
     } else if (normalizedScore <= 1) {
         // Interpolate between medianRevenue and upperQuartileRevenue
         const fraction = (normalizedScore - 2/3) / (1/3);
-        predictedRevenue = medianRevenue + fraction * (upperQuartileRevenue - medianRevenue);
+        predictedUnits = medianUnits + fraction * (upperQuartileUnits - medianUnits);
     } else {
         // Cap the score at maxScore, just in case it's over
-        predictedRevenue = maxRevenue;
+        predictedUnits = maxUnits;
     }
 
-    predictedRevenue = predictedRevenue * totalLocs;
+    predictedUnits = predictedUnits * totalLocs;
 
-    return predictedRevenue;
+    return predictedUnits;
 }
 
 function parseDealIds(dealString) {
@@ -799,7 +776,7 @@ function parseDealIds(dealString) {
 }
 
 
-function renderResults(allMessaging, totalScore, maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, scoreBasedPrediction, exampleDeals, totalLocs) {
+function renderResults(allMessaging, totalScore, maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, revPrediction, unitsPrediction, exampleDeals, totalLocs, price, fee) {
 
     jQuery("#messaging").empty();
     jQuery("#finalScore").empty();
@@ -810,13 +787,24 @@ function renderResults(allMessaging, totalScore, maxScore, minRevenue, lowerQuar
 
     for (i=0; i<sortedArray.length; i++) {
 
-        var uplift =  predictRevenue(totalScore+sortedArray[i][3], maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, totalLocs) - scoreBasedPrediction;
+        var priceToUse = price;
+
+
+        if ( sortedArray[i][4] == "price" ) {
+
+            priceToUse = sortedArray[i][5];
+
+        }
+
+        var upliftUnits =  predictUnits(totalScore+sortedArray[i][3], maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, totalLocs) - unitsPrediction;
+
+        var upliftRev =  (priceToUse * (fee/100) * predictUnits(totalScore+sortedArray[i][3], maxScore, minRevenue, lowerQuartileRevenue, medianRevenue, upperQuartileRevenue, maxRevenue, totalLocs)) - revPrediction;
 
         var upliftSentence = "";
 
-        if ( uplift > 0 ) {
+        if ( upliftUnits > 0 ) {
 
-            upliftSentence = '  This would increase predicted revenue by <b>&pound'+round(uplift,2)+'</b>.'
+            upliftSentence = '  This would increase predicted units by <b>'+round(upliftUnits,2)+'</b>, and predicted net revenue by <b>&pound'+round(upliftRev,2)+'</b>.';
 
         }
 
@@ -824,9 +812,11 @@ function renderResults(allMessaging, totalScore, maxScore, minRevenue, lowerQuar
 
     }
 
-    jQuery("#finalScore").append('<div>Final Score: <span style="font-weight:bold">'+totalScore+'/'+maxScore+'</span></div>');
+    jQuery("#finalScore").append('<div>Final Customer Interest Score: <span style="font-weight:bold">'+totalScore+'/'+maxScore+'</span></div>');
 
-    jQuery("#predictedRev").append('<div>30 Day Predicted Net Revenue: <span style="font-weight:bold">&pound'+round(scoreBasedPrediction,2)+'</span></div>');
+    jQuery("#predictedRev").append('<div>30 Day Predicted Units: <span style="font-weight:bold">'+round(unitsPrediction,2)+'</span></div>');
+
+    jQuery("#predictedRev").append('<div>30 Day Predicted Net Revenue: <span style="font-weight:bold">&pound'+round(revPrediction,2)+'</span></div>');
 
     const htmlTable = parseDealIds(exampleDeals);
 
