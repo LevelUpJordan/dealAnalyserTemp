@@ -1,4 +1,4 @@
-console.log("0.40");
+console.log("0.41");
 
 function buildMongoQuery(type, location, region, category, subcategory, concept) {
 
@@ -415,7 +415,10 @@ function updateSubcategories() {
 
     // Add new subcategory options
     if (selectedCategory in categories) {
-        categories[selectedCategory].forEach(function(subcategory) {
+
+        var sortedSubcats = categories[selectedCategory].sort();
+        
+        sortedSubcats.forEach(function(subcategory) {
             const option = document.createElement("option");
             option.value = subcategory;
             option.text = subcategory;
@@ -428,7 +431,10 @@ function updateSubcategories() {
 
     // Add new concept options
     if (selectedCategory in concepts) {
-        concepts[selectedCategory].forEach(function(concept) {
+
+        var sortedConcepts = concepts[selectedCategory].sort();
+        
+        sortedConcepts.forEach(function(concept) {
             const option = document.createElement("option");
             option.value = concept;
             option.text = concept;
