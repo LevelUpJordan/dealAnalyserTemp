@@ -574,11 +574,11 @@ function calculateResults(result, type) {
 
 
     var reviewCount = document.getElementById("google_review_count").value;
-    var reviewCountScoring = 3;
+    var reviewCountScoring = 4;
 
     var meanReviewCount = 50;
     var medianReviewCount = 50;
-    var upperReviewCount = 100;
+    var upperReviewCount = 300;
     var lowerReviewCount = 20;
 
     var [reviewCountScoringVsAverage, reviewCountMessaging, reviewCountDefecit, reviewCountNextIncrement, reviewCountTarget] = scoreVsAverage(reviewCount, lowerReviewCount, medianReviewCount, upperReviewCount, reviewCountScoring, "Google Review Count");
